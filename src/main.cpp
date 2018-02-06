@@ -4,6 +4,7 @@
 #include <stack>
 #include <set>
 #include <map>
+#include <string>
 #include "NKA.h" // Недетерминированный конечный автомат
 #include "Token.h" // Токен
 #include "Scanner.h" // Лексический анализатор
@@ -20,10 +21,18 @@ void AddHelper(map<char, vector<int>>*, int, char, int); // Для помощи 
 int main(int argc, char* argv[])
 {
 	setlocale(LC_ALL, "russian");
+	ofstream outProtocol("protocol.txt");
+
 	try
 	{
+		/*
+		 * Correct math expression examples:
+		 * (-ln(e)) + 4 * x * (7) / x^5 + sin(x + 8)
+		 * sinlg(x * (254 + 80.55)) / ln(e)
+		 */
+
 		const int n = 58; // Кол-во состояний НКА
-		char* str = new char[300]; // Входная строка
+		string fileContent; // Входная строка
 		map<char, vector<int>>* move; // Таблица переходов НКА
 
 		move = new map<char, vector<int>>[n];
@@ -35,13 +44,30 @@ int main(int argc, char* argv[])
 		FillingFinishedStates(fStates, n);
 		FillingMapStatesToTokensNames(mSt, n);
 
+		ifstream inExpression;
+		inExpression.open("expression.txt");
+
+		getline(inExpression, fileContent);
+		inExpression.close();
+
+		char *str = new char[fileContent.length() + 1];
+		strcpy(str, fileContent.c_str());
+
 		Scanner lexi(move, n, fStates, true, mSt); // true - считать все цифры, как символ '~'
-		strcpy(str, "(-ln(e)) + 4 * x * (7)"); // sinlg(x * (254 + 80.55)) / ln(e)
+		outProtocol << "Expression: " << str << endl;
+
 		vector<Token> tokens;
 		if (lexi.Scan(str, tokens))
 		{
+			outProtocol << "Scanner: success" << endl;
+
+			ofstream outTokens("tokens.txt");
 			for (int i = 0; i < tokens.size(); i++)
-				cout << tokens[i] << endl;
+			{
+				outTokens << tokens[i] << endl;
+			}
+
+			outProtocol << "Tokens was printed in tokens.txt" << endl;
 
 			vector<Production> G; // Грамматика G'
 
@@ -93,6 +119,7 @@ int main(int argc, char* argv[])
 
 			ofstream out("LR(0).txt");
 			generator.PrintC(out, generator.CreateC());
+			outProtocol << "LR(0) set was printed in LR(0).txt" << endl;
 
 			int size;
 			map<string, TypeAction>* SLR_table;
@@ -101,28 +128,40 @@ int main(int argc, char* argv[])
 			if (!generator.CreateSLRTable(SLR_table, size, tableConflicts))
 			{
 				ofstream out2("conflicts.txt");
-				cout << "В таблице есть конфликты. Смотри conflicts.txt." << endl;
+				outProtocol << "There are conflicts. See conflicts.txt." << endl;
 				generator.PrintConflictsTable(out2, tableConflicts);
 				out2.close();
 			}
-			ofstream out3("table.txt");
+			ofstream out3("slr-table.txt");
 			generator.PrintSLRTable(out3, SLR_table, size);
+			outProtocol << "SLR Table was printed in slr-table.txt" << endl;
 
 			if (generator.StartSLRAnalysis(tokens, SLR_table, size))
-				cout << "good" << endl;
+			{
+				outProtocol << "Parser: success" << endl;
+				cout << "Ready with succeed. See protocol.txt" << endl;
+			}
 			else
-				cout << "bad" << endl;
+			{
+				outProtocol << "Parser: failure" << endl;
+				cout << "Ready with failure. See protocol.txt" << endl;
+			}
 
 			out.close();
 			out3.close();
+			outTokens.close();
 		}
 		else
-			cout << "Лексическая ошибка!" << endl;
+		{
+			outProtocol << "Scanner: failure" << endl;
+		}
 	}
 	catch (exception& ex)
 	{
 		cout << ex.what() << endl;
 	}
+
+	outProtocol.close();
 
 	system("pause");
 	return 0;
