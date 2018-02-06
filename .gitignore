@@ -1,0 +1,8 @@
+# git ignore file
+/src/Debug
+/src/LR(0).txt
+/src/table.txt
+/src/conflicts.txt
+/src/MathExpressionRecognizer.opensdf
+/src/MathExpressionRecognizer.sdf
+/src/MathExpressionRecognizer.v12.suo
